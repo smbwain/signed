@@ -1,20 +1,28 @@
 {
-  "name": "signed",
-  "version": "0.0.3",
-  "description": "Tiny express library for signing urls and validating them based on secret key",
-  "keywords": [
-    "express",
-    "url signature"
-  ],
-  "author": {
-    "name": "Roman Ditchuk",
-    "email": "me@ototak.net"
-  },
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://www.opensource.org/licenses/MIT"
-    }
-  ],
-  "main": "./lib/signed"
+    "name": "signed",
+    "version": "0.0.4",
+    "description": "Tiny express library for signing urls and validating them based on secret key",
+    "keywords": [
+        "express",
+        "url signature"
+    ],
+    "bugs": {
+        "url": "https://github.com/smbwain/signed/issues"
+    },
+    "licenses": [
+        {
+            "type": "MIT",
+            "url": "http://www.opensource.org/licenses/MIT"
+        }
+    ],
+    "author": {
+        "name": "Roman Ditchuk",
+        "email": "me@ototak.net",
+        "url": "http://ototak.net"
+    },
+    "repository": {
+        "type" : "git",
+        "url" : "https://github.com/smbwain/signed.git"
+    },
+    "main": "./lib/signed"
 }

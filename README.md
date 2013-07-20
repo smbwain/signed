@@ -56,7 +56,7 @@ Sample application
 var express = require('express');
 
 // Create signature
-var signed = require('./../signed');
+var signed = require('signed');
 var signature = signed({
     secret: 'Xd<dMf72sj;6'
 });
@@ -84,7 +84,7 @@ API
 signed(options)
 ------------------
 
-Library exported function which takes options and returns signature object.
+Library exports function which takes _options_ and returns signature object.
 
 ```js
 var signed = require('signed');
@@ -99,7 +99,7 @@ var signature = signed({
 signature.sign(url, options)
 ----------------------------
 
-This method signs url and returns signed one. You also may pass additional object options.
+This method signs url and returns signed one. You also may pass additional object _options_.
 
 ```js
 var signedUrl = signature.sign('http://example.com/resource', {
