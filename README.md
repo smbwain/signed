@@ -81,7 +81,7 @@ app.listen(8080);
 API
 ===
 
-signed([options])
+signed(options)
 ------------------
 
 Library exports function which takes _options_ and returns signature object.
