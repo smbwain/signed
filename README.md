@@ -3,13 +3,13 @@ Signed
 
 Signed is tiny node.js/express library for signing urls and validating them based on secret key.
 
-It may be used for secure sharing urls for users, without need to check permissions on resources server.
+It might be used for secure sharing urls for users, without need to check permissions on resources server.
 
 E.g.
 
 You have front server, which generates html or supports RESTFull API. And you have data server, which provides some resources.
 
-With the help of this library you may sign urls on front server and give its to end users. After that you may verify signature on data server.
+With the help of this library you may sign urls on front server and give them to end users. After that, you may verify signature on data server.
 
 So, sessions or storing additional data aren't needed for this purpose.
 
@@ -67,7 +67,7 @@ var app = express();
 app.get('/', function(res, req) {
     var s = signature.sign('http://localhost:8080/source/a');
     req.send('<a href="'+s+'">'+s+'</a><br/>');
-    // It outs something like http://localhost:8080/source/a?signed=r:1422553972;e8d071f5ae64338e3d3ac8ff0bcc583b
+    // It prints something like http://localhost:8080/source/a?signed=r:1422553972;e8d071f5ae64338e3d3ac8ff0bcc583b
 });
 
 // Validating
@@ -81,7 +81,7 @@ app.listen(8080);
 API
 ===
 
-signed(options)
+signed([options])
 ------------------
 
 Library exports function which takes _options_ and returns signature object.
@@ -96,7 +96,7 @@ var signature = signed({
 });
 ```
 
-signature.sign(url, options)
+signature.sign(url[, options])
 ----------------------------
 
 This method signs url and returns signed one. You also may pass additional object _options_.
@@ -115,7 +115,7 @@ var signedUrl = signature.sign('http://example.com/resource', {
 });
 ```
 
-signature.verifier(options)
+signature.verifier([options])
 ---------------------------
 
 Returns express middleware for validate incoming requests.
@@ -127,15 +127,20 @@ app.get('/resource', signature.verifier({
         resp.send(403);
     },
     // if specified, this middleware will be called when request isn't valid
-    // default behavior is to send empty request with 403 status code
+    // by default, empty request with status code 403 will be sent
 
     expired: function(req, resp) {
         resp.send(410);
     }
     // if specified, this middleware will be called if request is valid, but it's expired
-    // default behavior is to send empty request with 410 status code
+    // by default, empty request with status code 410 will be sent
 
 }), function(req, res) {
     res.send('ok');
 });
 ```
+
+License
+=======
+
+MIT
