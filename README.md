@@ -95,10 +95,13 @@ Example
 ```ts
 import signed from 'signed';
 const signature = signed({
+
+    // secret is required param
     secret: 'secret string',
-        // secret is required param
+        
+    // optional. default ttl of signed urls will be 60 sec
     ttl: 60
-        // optional. default ttl of signed urls will be 60 sec
+    
 });
 ```
 
@@ -124,15 +127,20 @@ Example
 
 ```js
 const signedUrl = signature.sign('http://example.com/resource', {
+
+    // if specified, only this method will be allowed
+    // may be string of few methods separated by comma, or array of strings
     method: 'get',
-        // if specified, only this method will be allowed
-        // may be string of few methods separated by comma, or array of strings
+        
+    // time to live for url, started from now
     ttl: 50,
-        // time to live for url, started from now
+        
+    // expiration timestamp (if ttl isn't specified)
     exp: 1374269431,
-        // expiration timestamp (if ttl isn't specified)
+        
+    // if set, only request from this address will be allowed
     addr: '::ffff:127.0.0.1'
-        // if set, only request from this address will be allowed
+    
 });
 ```
 
