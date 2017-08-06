@@ -1,28 +1,46 @@
 {
-    "name": "signed",
-    "version": "0.0.5",
-    "description": "Tiny express library for signing urls and validating them based on secret key",
-    "keywords": [
-        "express",
-        "url signature"
-    ],
-    "bugs": {
-        "url": "https://github.com/smbwain/signed/issues"
-    },
-    "licenses": [
-        {
-            "type": "MIT",
-            "url": "http://www.opensource.org/licenses/MIT"
-        }
-    ],
-    "author": {
-        "name": "Roman Ditchuk",
-        "email": "me@ototak.net",
-        "url": "http://ototak.net"
-    },
-    "repository": {
-        "type" : "git",
-        "url" : "https://github.com/smbwain/signed.git"
-    },
-    "main": "./lib/signed"
+  "name": "signed",
+  "version": "1.0.0",
+  "description": "Tiny express library for signing urls and validating them based on secret key",
+  "keywords": [
+    "express",
+    "url",
+    "signature",
+    "sign"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "tests": "mocha dist/tests"
+  },
+  "bugs": {
+    "url": "https://github.com/smbwain/signed/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
+  "author": {
+    "name": "Roman Ditchuk",
+    "email": "me@ototak.net",
+    "url": "http://ototak.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smbwain/signed.git"
+  },
+  "main": "./dist/index",
+  "types": "./types.d.ts",
+  "devDependencies": {
+    "@types/mocha": "2.2.41",
+    "@types/node": "8.0.19",
+    "express": "4.15.3",
+    "mocha": "3.5.0",
+    "request": "2.81.0",
+    "typescript": "2.4.2"
+  },
+  "dependencies": {
+    "@types/express": "4.0.36"
+  }
 }

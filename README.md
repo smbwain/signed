@@ -11,40 +11,36 @@ You have front server, which generates html or supports RESTFull API. And you ha
 
 With the help of this library you may sign urls on front server and give them to end users. After that, you may verify signature on data server.
 
-So, sessions or storing additional data aren't needed for this purpose.
+So, sessions or storing additional data aren't required.
 
 Let's start
 ===========
 
-It's only few lines.
-
-To install library type in your console
-
-```
-npm install signed
+```bash
+npm install --save signed
 ```
 
 Create signature object based on secret.
 
 Secret string should not be known for anyone else, except your servers
 
-```js
-var signed = require('signed');
-var signature = signed({
+```ts
+import signed from 'signed';
+const signature = signed({
     secret: 'secret string'
 });
 ```
 
 Sign url
 
-```js
-var signedUrl = signature.sign('http://example.com/resource');
+```ts
+const signedUrl = signature.sign('http://example.com/resource');
 ```
 
 Verify url on resource side
 
-```js
-app.get('/resource', signature.verifier(), function(req, res) {
+```ts
+app.get('/resource', signature.verifier(), (req, res, next) => {
     res.send('ok');
 });
 ```
@@ -52,26 +48,26 @@ app.get('/resource', signature.verifier(), function(req, res) {
 Sample application
 ------------------
 
-```js
-var express = require('express');
+```ts
+import * as express from 'express';
+import signed from 'signed';
 
 // Create signature
-var signed = require('signed');
-var signature = signed({
+const signature = signed({
     secret: 'Xd<dMf72sj;6'
 });
 
-var app = express();
+const app = express();
 
 // Index with signed link
-app.get('/', function(res, req) {
-    var s = signature.sign('http://localhost:8080/source/a');
+app.get('/', (res, req, next) => {
+    const s = signature.sign('http://localhost:8080/source/a');
     req.send('<a href="'+s+'">'+s+'</a><br/>');
     // It prints something like http://localhost:8080/source/a?signed=r:1422553972;e8d071f5ae64338e3d3ac8ff0bcc583b
 });
 
 // Validating
-app.get('/source/:a', signature.verifier(), function(res, req) {
+app.get('/source/:a', signature.verifier(), (res, req, next) => {
     req.send(res.params.a);
 });
 
@@ -81,28 +77,53 @@ app.listen(8080);
 API
 ===
 
-signed(options)
-------------------
+Library exports factory which takes _options_ and returns _Signature object_.
 
-Library exports function which takes _options_ and returns signature object.
+```ts
+function(options: SignatureOptions): Signature; 
+```
 
-```js
-var signed = require('signed');
-var signature = signed({
+```ts
+type SignatureOptions = {
+    secret: string,
+    ttl?: number
+}
+```
+
+Example
+
+```ts
+import signed from 'signed';
+const signature = signed({
     secret: 'secret string',
         // secret is required param
     ttl: 60
-        // if it's set, default ttl of signed urls will be 60 sec
+        // optional. default ttl of signed urls will be 60 sec
 });
 ```
 
-signature.sign(url[, options])
-----------------------------
+signature.sign
+--------------
 
 This method signs url and returns signed one. You also may pass additional object _options_.
 
+```ts
+signature.sign(url: string, options?: SignMethodOptions): string;
+```
+
+```ts
+type SignMethodOptions = {
+    method?: string | string[],
+    ttl?: number,
+    exp?: number,
+    addr?: string
+}
+```
+
+Example
+
 ```js
-var signedUrl = signature.sign('http://example.com/resource', {
+const signedUrl = signature.sign('http://example.com/resource', {
     method: 'get',
         // if specified, only this method will be allowed
         // may be string of few methods separated by comma, or array of strings
@@ -110,33 +131,54 @@ var signedUrl = signature.sign('http://example.com/resource', {
         // time to live for url, started from now
     exp: 1374269431,
         // expiration timestamp (if ttl isn't specified)
-    addr: '127.0.0.1'
+    addr: '::ffff:127.0.0.1'
         // if set, only request from this address will be allowed
 });
 ```
 
-signature.verifier([options])
----------------------------
+signature.verifier
+------------------
 
-Returns express middleware for validate incoming requests.
+Return express middleware for validate incoming requests.
 
-```js
+```ts
+signature.verifier(options?: VerifierMethodOptions): express.RequestHandler;
+```
+
+```ts
+type VerifierMethodOptions = {
+    blackholed?: RequestHandler,
+    expired?: RequestHandler,
+    addressReader?: AddressReader
+}
+```
+
+Example
+
+```ts
 app.get('/resource', signature.verifier({
 
-    blackholed: function(req, resp) {
-        resp.send(403);
-    },
     // if specified, this middleware will be called when request isn't valid
-    // by default, empty request with status code 403 will be sent
-
-    expired: function(req, resp) {
-        resp.send(410);
-    }
-    // if specified, this middleware will be called if request is valid, but it's expired
-    // by default, empty request with status code 410 will be sent
-
-}), function(req, res) {
-    res.send('ok');
+    // by default, following error will be thrown
+    blackholed: (req, res, next) => {
+        const err = new Error('Blackholed');
+        (err as any).status = 403;
+        next(err);
+    },
+    
+    // if specified, this middleware will be called if request is valid, but it's been expired
+    // by default, following error will be thrown
+    expired: (req, res, next) => {
+        const err = new Error('Expired');
+        (err as any).status = 410;
+        next(err);
+    },
+    
+    // if specified, this method will be used to retrieve address of remote client
+    // by default, following method will be used
+    addressReader: req => req.connection.remoteAddress
+}), (req, res, next) => {
+    res.send('hello');
 });
 ```
 
