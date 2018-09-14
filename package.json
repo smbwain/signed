@@ -1,6 +1,6 @@
 {
   "name": "signed",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tiny express library for signing urls and validating them based on secret key",
   "keywords": [
     "express",
