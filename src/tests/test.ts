@@ -41,6 +41,11 @@ describe('test1', function() {
         app.get('/try', signature.verifier(), function(res, req) {
             req.send('ok');
         });
+        
+        const v1 = express.Router();
+        v1.get('/try', signature.verifier(), (_, req) => req.send('ok'));
+        app.use('/v1', v1);
+
         await new Promise((resolve, reject) => {
             server = app.listen(TEST_PORT, err => {
                 err ? reject(err) : resolve();
@@ -50,6 +55,10 @@ describe('test1', function() {
 
     it('should be 200', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`));
+    });
+
+    it('should be 200 (with baseUrl)', async () => {
+        await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/v1/try`));
     });
 
     it('should be 200 (address check)', async () => {

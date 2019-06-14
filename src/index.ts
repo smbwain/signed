@@ -64,7 +64,7 @@ class Signature implements Types.Signature {
     }
 
     verifyUrl(req: Request, addressReader?: Types.AddressReader): Types.VerifyResult {
-        const url = req.protocol+'://'+req.get('host')+req.url;
+        const url = `${req.protocol}://${req.get('host')}${req.baseUrl}${req.url}`;
 
         if( url.length < 33  ||  !this.verifyString( url.substring(0, url.length-32), url.substr(-32) ) ) {
             return Types.VerifyResult.blackholed;
