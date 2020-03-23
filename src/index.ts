@@ -7,6 +7,8 @@ import {Request, RequestHandler} from 'express';
 
 import * as Types from './types';
 
+const EQ = encodeURIComponent(':');
+const SEP = encodeURIComponent(';');
 class Signature implements Types.Signature {
     private secret : string[];
     private ttl : number;
@@ -41,7 +43,7 @@ class Signature implements Types.Signature {
             data.m = (Array.isArray(options.method) ? options.method.join(',') : options.method).toUpperCase();
         }
 
-        url += (url.indexOf('?') == -1 ? '?' : '&') + 'signed='+querystring.stringify(data, ';', ':') + ';';
+        url += (url.indexOf('?') == -1 ? '?' : '&') + 'signed='+querystring.stringify(data, SEP, EQ) + SEP;
 
         const hash = createHash('md5');
         hash.update(url, 'utf8');
@@ -78,7 +80,7 @@ class Signature implements Types.Signature {
         if(lastAmpPos == -1) {
             return Types.VerifyResult.blackholed;
         }
-        const data = querystring.parse( url.substring(lastAmpPos+8, url.length-33), ';', ':');
+        const data = querystring.parse( url.substring(lastAmpPos+8, url.length-33), SEP, EQ);
         req.url = url.substr(0, lastAmpPos);
 
         // check additional conditions
