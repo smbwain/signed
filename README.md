@@ -9,7 +9,7 @@ No session needed. You can sign and verify url on different servers.
 
 > Important!!!
 > 
-> Urls signed by version 1.x.x of this library are not be valid with 2.x.x
+> Urls signed by version 1.x.x of this library are not valid with 2.x.x
 
 How to use
 ===========
@@ -90,7 +90,7 @@ const url = signature.sign('http://localhost:8080');
 
 // ...
 
-signature.verify(url);
+signature.verify(url); // returns "http://localhost:8080" or throws error
 ```
 
 or:
@@ -98,15 +98,15 @@ or:
 ```ts
 const url = signature.sign('http://localhost:8080', {
     method: ['get', 'post'],
-    address: '127.0.0.1',
+    addr: '127.0.0.1',
 });
 
 // ...
 
 signature.verify(url, {
     method: 'get',
-    address: '127.0.0.1',
-});
+    addr: '127.0.0.1',
+}); // returns "http://localhost:8080" or throws error
 ```
 
 ### Error handling
