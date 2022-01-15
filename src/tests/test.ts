@@ -1,34 +1,31 @@
-
-import signed, {Signature} from '../..';
-
-import * as assert from 'assert';
+import signed, {Signature} from '../index';
 import * as express from 'express';
-import * as request from 'request';
+import fetch from 'node-fetch';
+import {Server} from 'http';
+import * as assert from 'assert';
 
 const TEST_PORT = 23001;
 
-function makeRequest(path, {expectedCode = 200} = {}) : Promise<string> {
-    return new Promise((resolve, reject) => {
-        request(path, (err, response, body) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            if (response.statusCode != expectedCode) {
-                err = new Error(`Wrong status code: ${response.statusCode}`);
-                err.statusCode = response.statusCode;
-                reject(err);
-                return;
-            }
-            resolve(body);
-        })
-    });
+async function makeRequest(
+    url: string,
+    {
+        expectedCode = 200,
+    } = {},
+): Promise<string> {
+    console.log(`url: ${url}`);
+    const req = await fetch(url);
+    if (req.status !== expectedCode) {
+        throw new Error(`Status code: ${req.status}. Expected: ${expectedCode}`);
+    }
+    return req.text();
 }
 
 describe('test1', function() {
     this.timeout(10000);
 
-    let signature : Signature, app, server;
+    let signature: Signature;
+    let app: express.Application;
+    let server: Server;
 
     it('should create signature', () => {
         signature = signed({
@@ -41,14 +38,23 @@ describe('test1', function() {
         app.get('/try', signature.verifier(), function(res, req) {
             req.send('ok');
         });
+
+        app.get('/try-blackholed', signature.verifier({
+            blackholed: (req, res, next) => {
+                res.statusCode = 400;
+                res.send();
+            },
+        }), function(res, req) {
+            req.send('ok');
+        });
         
         const v1 = express.Router();
         v1.get('/try', signature.verifier(), (_, req) => req.send('ok'));
         app.use('/v1', v1);
 
-        await new Promise((resolve, reject) => {
-            server = app.listen(TEST_PORT, err => {
-                err ? reject(err) : resolve();
+        await new Promise<void>((resolve) => {
+            server = app.listen(TEST_PORT, () => {
+                resolve();
             });
         });
     });
@@ -63,32 +69,32 @@ describe('test1', function() {
 
     it('should be 200 (address check)', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
-            addr: '::ffff:127.0.0.1'
+            addr: '::ffff:127.0.0.1',
         }));
     });
 
     it('should be 200 (method check)', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
-            method: 'get,post'
+            method: 'get,post',
         }));
     });
 
     it('should be 200 (ttl check)', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
-            ttl: 5
+            ttl: 5,
         }));
     });
 
     it('should be 200 (expiration check)', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
-            exp: Date.now()+5000
+            exp: Math.floor(Date.now()/1000) + 5,
         }));
     });
 
     it('should be 403 (bad token)', async() => {
         await makeRequest(
             signature.sign(`http://localhost:${TEST_PORT}/try`)+'1',
-            {expectedCode: 403}
+            {expectedCode: 403},
         );
     });
 
@@ -96,7 +102,7 @@ describe('test1', function() {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
             addr: '127.0.0.2'
         }), {
-            expectedCode: 403
+            expectedCode: 403,
         });
     });
 
@@ -104,7 +110,7 @@ describe('test1', function() {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
             method: 'post,delete'
         }), {
-            expectedCode: 403
+            expectedCode: 403,
         });
     });
 
@@ -115,7 +121,7 @@ describe('test1', function() {
         await new Promise(resolve => setTimeout(resolve, 2000));
         await makeRequest(
             link,
-            {expectedCode: 410}
+            {expectedCode: 410},
         );
     });
 
@@ -126,15 +132,36 @@ describe('test1', function() {
         await new Promise(resolve => setTimeout(resolve, 2000));
         await makeRequest(
             link,
-            {expectedCode: 410}
+            {expectedCode: 410},
+        );
+    });
+
+    it('should be 400 (custom blackholed callback)', async() => {
+        await makeRequest(
+            `http://localhost:${TEST_PORT}/try-blackholed`,
+            {expectedCode: 400},
         );
     });
 
     it('should stop server', async () => {
-        await new Promise(resolve => {
+        await new Promise<void>(resolve => {
             server.close(() => {
                 resolve();
-            })
+            });
         })
+    });
+
+    it('should verify with .verify method', () => {
+        const url = signature.sign('http://localhost:8080', {
+            method: ['get', 'post'],
+            addr: '127.0.0.1',
+        });
+
+        console.log(url);
+
+        assert(signature.verify(url, {
+            method: 'get',
+            addr: '127.0.0.1',
+        }) === 'http://localhost:8080');
     });
 });

@@ -1,43 +1,66 @@
 Signed
 ======
 
-Signed is tiny node.js/express library for signing urls and validating them based on secret key.
+_signed_ is tiny node.js/express library for signing urls and validating them based on secret key.
 
-It might be used for secure sharing urls for users, without need to check permissions on resources server.
+It can be used for sharing url for the user securely, without need to check permissions when they use this url after.
 
-E.g.
+No session needed. You can sign and verify url on different servers.
 
-You have front server, which generates html or supports RESTFull API. And you have data server, which provides some resources.
+> Important!!!
+> 
+> Urls signed by version 1.x.x of this library are not be valid with 2.x.x
 
-With the help of this library you may sign urls on front server and give them to end users. After that, you may verify signature on data server.
-
-So, sessions or storing additional data aren't required.
-
-Let's start
+How to use
 ===========
 
 ```bash
-npm install --save signed
+npm i signed
 ```
 
-Create signature object based on secret.
+### Let's create signature object based on secret.
 
-Secret string should not be known for anyone else, except your servers
+Signature object will be needed later to sign url, or to validate it.
 
 ```ts
 import signed from 'signed';
 const signature = signed({
-    secret: 'secret string'
+    secret: 'secret string',
 });
 ```
 
-Sign url
+Possible options:
+  - `secret: string` It MUST NOT be known for anyone else except you servers.
+  - `ttl?: number` Default time to live for signed url (in seconds). If not set, signed url will be valid forever by default
+  - `hash: string | HashFunction` What type of hash function should be used to sign url. `sha1` is used by default.
+    But you can pass any other algorithm supported by [crypto.createHash()](https://nodejs.org/api/crypto.html#cryptocreatehashalgorithm-options).
+    You can also pass your own hashing function `(input: string, secret: string) => string`.
+
+### Let's sign url
 
 ```ts
 const signedUrl = signature.sign('http://example.com/resource');
 ```
+You also can optionally pass object with options:
 
-Verify url on resource side
+```ts
+const signedUrl = signature.sign('http://example.com/resource', {
+    method: 'get',
+});
+```
+
+Possible options:
+
+ - `method?: string | string[]` List of http methods (as array, or separated by comma), which can be used.
+   If not passed - any http method will be allowed.
+ - `ttl?: number` Time to live for url starting from now (in seconds).
+ - `exp?: number` Expiration unix timestamp (in seconds). Can be passed instead of ttl 
+ - `addr?: string` Only this user's address will be allowed.
+   You can pass user's address here to prevent sharing signed url with anyone else.
+   
+### Let's verify signature
+
+So now, when you sent signed url to user, it's time to add verification for endpoints which should be accessible only with valid signature.
 
 ```ts
 app.get('/resource', signature.verifier(), (req, res, next) => {
@@ -45,8 +68,86 @@ app.get('/resource', signature.verifier(), (req, res, next) => {
 });
 ```
 
-Sample application
-------------------
+You can also pass object with additional options to _verifier_ method.
+Possible options:
+
+ - `addressReader?: (req: Request) => string` Function which will be used to retrieve user's address (for the cases when you added address to signature).
+   By default, `req => req.socket.remoteAddress` is be used.
+ - `blackholed?: RequestHandler` Handler to use in the case of wrong signature.
+
+      (It's added for backward compatibility. It's better to not use it. See [#Error handling]()).
+ 
+ - `expired?: RequestHandler` Handler to use in the case of valid, but expired signature.
+
+     (It's added for backward compatibility. It's better to not use it. See [#Error handling]()).
+
+### Using without express middleware
+
+If you don't want to use it with express, you can just validate url with .verify(url, options) method:
+
+```ts
+const url = signature.sign('http://localhost:8080');
+
+// ...
+
+signature.verify(url);
+```
+
+or:
+
+```ts
+const url = signature.sign('http://localhost:8080', {
+    method: ['get', 'post'],
+    address: '127.0.0.1',
+});
+
+// ...
+
+signature.verify(url, {
+    method: 'get',
+    address: '127.0.0.1',
+});
+```
+
+### Error handling
+
+By default, if there is bad signature, verifier middleware throws SignatureError to the express _next_ function.
+
+403 http status will be sent for bad signature and 410 if signature is expired.
+
+You can handle these errors yourself, using express error handler middleware:  
+
+```ts
+import {SignatureError} from 'signed';
+
+// ...
+
+app.use((req, res, next, err) => {
+    if (err instanceof SignatureError) {
+        // signature is not valid or expired
+    }
+});
+```
+
+Or you can differentiate bad signature and expired signature this way:
+
+```ts
+import {BlackholedSignatureError, ExpiredSignatureError} from 'signed';
+
+// ...
+
+app.use((req, res, next, err) => {
+    if (err instanceof BlackholedSignatureError) {
+        // signature is not valid
+    }
+    if (err instanceof ExpiredSignatureError) {
+        // signature is expired
+    }
+});
+```
+
+Example of application
+----------------------
 
 ```ts
 import * as express from 'express';
@@ -63,7 +164,7 @@ const app = express();
 app.get('/', (req, res, next) => {
     const s = signature.sign('http://localhost:8080/source/a');
     res.send('<a href="'+s+'">'+s+'</a><br/>');
-    // It prints something like http://localhost:8080/source/a?signed=r:1422553972;e8d071f5ae64338e3d3ac8ff0bcc583b
+    // It prints something like http://localhost:8080/source/a?signed=r_1422553972-e8d071f5ae64338e3d3ac8ff0bcc583b
 });
 
 // Validating
@@ -72,122 +173,6 @@ app.get('/source/:a', signature.verifier(), (req, res, next) => {
 });
 
 app.listen(8080);
-```
-
-API
-===
-
-Library exports factory which takes _options_ and returns _Signature object_.
-
-```ts
-function(options: SignatureOptions): Signature; 
-```
-
-```ts
-type SignatureOptions = {
-    secret: string,
-    ttl?: number
-}
-```
-
-Example
-
-```ts
-import signed from 'signed';
-const signature = signed({
-
-    // secret is required param
-    secret: 'secret string',
-        
-    // optional. default ttl of signed urls will be 60 sec
-    ttl: 60
-    
-});
-```
-
-signature.sign
---------------
-
-This method signs url and returns signed one. You also may pass additional object _options_.
-
-```ts
-signature.sign(url: string, options?: SignMethodOptions): string;
-```
-
-```ts
-type SignMethodOptions = {
-    method?: string | string[],
-    ttl?: number,
-    exp?: number,
-    addr?: string
-}
-```
-
-Example
-
-```js
-const signedUrl = signature.sign('http://example.com/resource', {
-
-    // if specified, only this method will be allowed
-    // may be string of few methods separated by comma, or array of strings
-    method: 'get',
-        
-    // time to live for url, started from now
-    ttl: 50,
-        
-    // expiration timestamp (if ttl isn't specified)
-    exp: 1374269431,
-        
-    // if set, only request from this address will be allowed
-    addr: '::ffff:127.0.0.1'
-    
-});
-```
-
-signature.verifier
-------------------
-
-Return express middleware for validate incoming requests.
-
-```ts
-signature.verifier(options?: VerifierMethodOptions): express.RequestHandler;
-```
-
-```ts
-type VerifierMethodOptions = {
-    blackholed?: RequestHandler,
-    expired?: RequestHandler,
-    addressReader?: AddressReader
-}
-```
-
-Example
-
-```ts
-app.get('/resource', signature.verifier({
-
-    // if specified, this middleware will be called when request isn't valid
-    // by default, following error will be thrown
-    blackholed: (req, res, next) => {
-        const err = new Error('Blackholed');
-        (err as any).status = 403;
-        next(err);
-    },
-    
-    // if specified, this middleware will be called if request is valid, but it's been expired
-    // by default, following error will be thrown
-    expired: (req, res, next) => {
-        const err = new Error('Expired');
-        (err as any).status = 410;
-        next(err);
-    },
-    
-    // if specified, this method will be used to retrieve address of remote client
-    // by default, following method will be used
-    addressReader: req => req.connection.remoteAddress
-}), (req, res, next) => {
-    res.send('hello');
-});
 ```
 
 License

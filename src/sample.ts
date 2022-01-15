@@ -1,5 +1,5 @@
 import * as express from 'express';
-import signed from '..';
+import signed from './index';
 
 // Create signature
 const signature = signed({
