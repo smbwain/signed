@@ -1,11 +1,15 @@
 Signed
 ======
 
-_signed_ is tiny node.js/express library for signing urls and validating them based on secret key.
+_signed_ is tiny node.js library for signing urls and validating them based on secret key.
 
-It can be used for sharing url for the user securely, without need to check permissions when they use this url after.
+In sort:
 
-No session needed. You can sign and verify url on different servers.
+- With the help of this library, you can sign url, which will be used by user later.
+- It verifies signature, when user uses this signed url. Ready to go "verify" express middleware included. (Although you can use this library without express.js as well)
+- No session needed. No additional server storage needed.
+- You can sign url and verify signature in different services/applications (as long as secret and hashing algorithm are the same).
+- When signing an url, you can specify some additional limitations: allowed http method(s), user's ip and expiration time.
 
 > Important!!!
 > 
@@ -72,14 +76,14 @@ You can also pass object with additional options to _verifier_ method.
 Possible options:
 
  - `addressReader?: (req: Request) => string` Function which will be used to retrieve user's address (for the cases when you added address to signature).
-   By default, `req => req.socket.remoteAddress` is be used.
+   By default, `req => req.socket.remoteAddress` is used.
  - `blackholed?: RequestHandler` Handler to use in the case of wrong signature.
 
-      (It's added for backward compatibility. It's better to not use it. See [#Error handling]()).
+      (It's added for backward compatibility. It's better to not use it. See [Error handling](#error-handling)).
  
  - `expired?: RequestHandler` Handler to use in the case of valid, but expired signature.
 
-     (It's added for backward compatibility. It's better to not use it. See [#Error handling]()).
+     (It's added for backward compatibility. It's better to not use it. See [Error handling](#error-handling)).
 
 ### Using without express middleware
 
@@ -122,7 +126,7 @@ import {SignatureError} from 'signed';
 
 // ...
 
-app.use((req, res, next, err) => {
+app.use((err, req, res, next) => {
     if (err instanceof SignatureError) {
         // signature is not valid or expired
     }
@@ -136,7 +140,7 @@ import {BlackholedSignatureError, ExpiredSignatureError} from 'signed';
 
 // ...
 
-app.use((req, res, next, err) => {
+app.use((err, req, res, next) => {
     if (err instanceof BlackholedSignatureError) {
         // signature is not valid
     }

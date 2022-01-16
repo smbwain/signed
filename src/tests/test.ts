@@ -1,8 +1,9 @@
-import signed, {Signature} from '../index';
+import signed, {BlackholedSignatureError, ExpiredSignatureError, Signature, SignatureError} from '../index';
 import * as express from 'express';
 import fetch from 'node-fetch';
 import {Server} from 'http';
 import * as assert from 'assert';
+import {ErrorRequestHandler, RequestHandler} from 'express';
 
 const TEST_PORT = 23001;
 
@@ -38,6 +39,35 @@ describe('test1', function() {
         app.get('/try', signature.verifier(), function(res, req) {
             req.send('ok');
         });
+
+        app.get('/try-with-error-handler-1', signature.verifier(), ((req, res, next) => {
+            res.send('ok');
+        }) as RequestHandler, ((err, req, res, next) => {
+            if (err instanceof BlackholedSignatureError) {
+                res.statusCode = 411;
+                res.send();
+                return;
+            }
+            if (err instanceof ExpiredSignatureError) {
+                res.statusCode = 412;
+                res.send();
+                return;
+            }
+            res.statusCode = 500;
+            res.send();
+        }) as ErrorRequestHandler);
+
+        app.get('/try-with-error-handler-2', signature.verifier(), ((req, res, next) => {
+            res.send('ok');
+        }) as RequestHandler, ((err, req, res, next) => {
+            if (err instanceof SignatureError) {
+                res.statusCode = 413;
+                res.send();
+                return;
+            }
+            res.statusCode = 500;
+            res.send();
+        }) as ErrorRequestHandler);
 
         app.get('/try-blackholed', signature.verifier({
             blackholed: (req, res, next) => {
@@ -142,6 +172,23 @@ describe('test1', function() {
             {expectedCode: 400},
         );
     });
+
+    it('should check custom error handler', async () => {
+        await makeRequest(
+            `http://localhost:${TEST_PORT}/try-with-error-handler-1`,
+            {expectedCode: 411},
+        );
+        await makeRequest(
+            signature.sign(`http://localhost:${TEST_PORT}/try-with-error-handler-1`, {
+                exp: Math.floor(Date.now()/1000) - 1,
+            }),
+            {expectedCode: 412},
+        );
+        await makeRequest(
+            `http://localhost:${TEST_PORT}/try-with-error-handler-2`,
+            {expectedCode: 413},
+        );
+    })
 
     it('should stop server', async () => {
         await new Promise<void>(resolve => {
