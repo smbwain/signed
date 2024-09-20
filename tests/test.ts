@@ -1,4 +1,4 @@
-import signed, {BlackholedSignatureError, ExpiredSignatureError, Signature, SignatureError} from '../index';
+import signed, {BlackholedSignatureError, ExpiredSignatureError, Signature, SignatureError} from '../src/index';
 import * as express from 'express';
 import fetch from 'node-fetch';
 import {Server} from 'http';
@@ -13,7 +13,6 @@ async function makeRequest(
         expectedCode = 200,
     } = {},
 ): Promise<string> {
-    console.log(`url: ${url}`);
     const req = await fetch(url);
     if (req.status !== expectedCode) {
         throw new Error(`Status code: ${req.status}. Expected: ${expectedCode}`);
@@ -22,8 +21,6 @@ async function makeRequest(
 }
 
 describe('test1', function() {
-    this.timeout(10000);
-
     let signature: Signature;
     let app: express.Application;
     let server: Server;
@@ -37,6 +34,12 @@ describe('test1', function() {
     it('should start server', async () => {
         app = express();
         app.get('/try', signature.verifier(), function(res, req) {
+            req.send('ok');
+        });
+
+        app.get('/try-with-custom-url-reader', signature.verifier({
+            urlReader: req => `http://localhost:${TEST_PORT}${req.originalUrl}`,
+        }), function(res, req) {
             req.send('ok');
         });
 
@@ -93,13 +96,17 @@ describe('test1', function() {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`));
     });
 
+    it('should be 200 (with custom url reader)', async () => {
+        await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try-with-custom-url-reader`));
+    });
+
     it('should be 200 (with baseUrl)', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/v1/try`));
     });
 
     it('should be 200 (address check)', async () => {
         await makeRequest(signature.sign(`http://localhost:${TEST_PORT}/try`, {
-            addr: '::ffff:127.0.0.1',
+            addr: '::1',
         }));
     });
 

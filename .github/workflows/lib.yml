@@ -1,27 +1,33 @@
-name: Lib CI
-
+name: Release
 on:
   push:
-    branches:
-      - master
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  release:
+    name: Build a release
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v1
-      - name: Use Node.js
-        uses: actions/setup-node@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup npm
+        uses: actions/setup-node@v4
         with:
-          node-version: 14.x
-      - name: npm install, build, and test
-        run: |
-          npm ci
-          npm run build
-          npm test
-      - name: npm publish
-        run: |
-          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
-          npm publish
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Setup version
         env:
-          CI: true
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION=$(echo $REF_NAME | sed 's/^v//g')
+          echo "Version: $VERSION"
+          npm pkg set version="$VERSION"
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish

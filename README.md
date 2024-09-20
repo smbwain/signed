@@ -3,7 +3,7 @@ Signed
 
 _signed_ is tiny node.js library for signing urls and validating them based on secret key.
 
-In sort:
+In short:
 
 - With the help of this library, you can sign url, which will be used by user later.
 - It verifies signature, when user uses this signed url. Ready to go "verify" express middleware included. (Although you can use this library without express.js as well)
@@ -75,6 +75,14 @@ app.get('/resource', signature.verifier(), (req, res, next) => {
 You can also pass object with additional options to _verifier_ method.
 Possible options:
 
+ - `urlReader?: (req: Request) => string`
+ 
+    By default verifier constructs original url as `${req.protocol}://${req.get('host')}${req.originalUrl}`.
+ 
+    But if you use some kind of reverse proxy/load balancer/etc, external protocol/host/port can be different from those used by application.
+    In that case you can pass you own method to build right correct external url to verify signature.
+
+    e.g. `req => https://api.exmaple.com${req.originalUrl}`
  - `addressReader?: (req: Request) => string` Function which will be used to retrieve user's address (for the cases when you added address to signature).
    By default, `req => req.socket.remoteAddress` is used.
  - `blackholed?: RequestHandler` Handler to use in the case of wrong signature.

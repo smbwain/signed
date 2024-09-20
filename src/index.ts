@@ -20,10 +20,9 @@ export interface SignMethodOptions {
 export interface VerifierMethodOptions {
     blackholed?: RequestHandler;
     expired?: RequestHandler;
-    addressReader?: AddressReader;
+    addressReader?: (req: Request) => string;
+    urlReader?: (req: Request) => string;
 }
-
-export type AddressReader = (req: Request) => string;
 
 interface SignatureData {
     e?: number; // exp timestamp
@@ -154,11 +153,12 @@ export class Signature {
         return originalUrl;
     }
 
-    public verifier({blackholed, expired, addressReader}: VerifierMethodOptions = {}): RequestHandler {
+    public verifier({blackholed, expired, addressReader, urlReader}: VerifierMethodOptions = {}): RequestHandler {
         addressReader ??= req => req.socket.remoteAddress;
+        urlReader ??= req => `${req.protocol}://${req.get('host')}${req.originalUrl}`
         return (req, res, next) => {
             try {
-                req.url = this.verify(`${req.protocol}://${req.get('host')}${req.originalUrl}`, {
+                req.url = this.verify(urlReader(req), {
                     method: req.method,
                     addr: addressReader(req),
                 });
